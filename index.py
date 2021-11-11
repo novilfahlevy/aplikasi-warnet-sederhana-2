@@ -238,14 +238,19 @@ def pilihan_menu_halaman_billing(tampilkan_menu = True) :
   try :
     print()
     if tampilkan_menu :
-      print('== Halaman Billing ==')
+      print('== Menu Billing ==')
       print('[1] Tampilkan Billing')
       print('[2] Tambah Billing')
       print('[3] Edit Billing')
       print('[4] Hapus Billing')
       print('[0] Kembali')
+    
+    pilihan = int(input('Pilih (pilih 99 untuk menampilkan menu) : '))
 
-    return int(input('Pilih : '))
+    if pilihan == 99 :
+      return pilihan_menu_halaman_billing()
+
+    return pilihan
   except ValueError :
     print(colored('Pilihan tidak tersedia', 'red'))
     return pilihan_menu_halaman_billing()
@@ -285,8 +290,6 @@ def hapus_pelanggan(pesan_error = False) :
     delete('pelanggan', id_pelanggan)
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} berhasil dihapus', 'green'))
-
-    return halaman_pelanggan(False)
   else :
     return hapus_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
@@ -310,8 +313,6 @@ def edit_pelanggan(pesan_error = False) :
 
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} telah diedit', 'green'))
-
-    return halaman_pelanggan(False)
   else :
     return edit_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
@@ -325,8 +326,6 @@ def tambah_pelanggan() :
   create('pelanggan', { 'id': id + 1, 'nama': nama, 'tanggal_bergabung': tanggal_bergabung })
   tampilkan_pelanggan()
   print(colored('Pelanggan telah ditambahkan', 'green'))
-
-  return halaman_pelanggan(False)
 
 def tampilkan_pelanggan() :
   print('Daftar Pelanggan :')
@@ -345,20 +344,22 @@ def tampilkan_pelanggan() :
 
   print(tabel)
 
-  return halaman_pelanggan(False)
-
 def pilihan_menu_halaman_pelanggan(tampilkan_menu = True) :
   try :
     print()
     if tampilkan_menu :
-      print('== Halaman Pelanggan ==')
+      print('== Menu Pelanggan ==')
       print('[1] Tampilkan Pelanggan')
       print('[2] Tambah Pelanggan')
       print('[3] Edit Pelanggan')
       print('[4] Hapus Pelanggan')
       print('[0] Kembali')
+    
+    pilihan = int(input('Pilih (99 untuk menampilkan menu) : '))
 
-    pilihan = int(input('Pilih : '))
+    if pilihan == 99 :
+      return pilihan_menu_halaman_pelanggan()
+    
     return pilihan
   except ValueError :
     print(colored('Pilihan tidak tersedia', 'red'))
@@ -367,15 +368,19 @@ def pilihan_menu_halaman_pelanggan(tampilkan_menu = True) :
 def halaman_pelanggan(tampilkan_menu = True) :
   pilihan = pilihan_menu_halaman_pelanggan(tampilkan_menu)
   if pilihan == 1 :
-    return tampilkan_pelanggan()
+    tampilkan_pelanggan()
+    return halaman_pelanggan(False)
   elif pilihan == 2 :
-    return tambah_pelanggan()
+    tambah_pelanggan()
+    return halaman_pelanggan(False)
   elif pilihan == 3 :
-    return edit_pelanggan()
+    edit_pelanggan()
+    return halaman_pelanggan(False)
   elif pilihan == 4 :
-    return hapus_pelanggan()
+    hapus_pelanggan()
+    return halaman_pelanggan(False)
   elif pilihan == 0 :
-    return halaman_user()
+    halaman_user()
   else :
     print(colored('Pilihan tidak tersedia', 'red'))
     return halaman_pelanggan()
