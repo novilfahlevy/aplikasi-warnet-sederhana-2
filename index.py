@@ -1,5 +1,5 @@
 from prettytable import PrettyTable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from termcolor import colored
 import getpass
 import json
@@ -7,6 +7,12 @@ import os
 
 if os.name.lower() == 'windows' :
   os.system('color')
+
+def bersihkan_console() :
+  if os.name.lower() == 'windows' :
+    os.system('cls')
+  else :
+    os.system('clear')
 
 def waktu_sekarang() :
   return datetime.now().strftime('%H:%M')
@@ -104,8 +110,11 @@ def delete(field, id) :
 
 # ============================================================================================================================== #
 
-def hapus_billing() :
+def hapus_billing(pesan_error = False) :
   tampilkan_billing()
+
+  if pesan_error :
+    print(pesan_error)
 
   id_billing = int(input('ID : '))
   billing = get_by_id('billing', id_billing)
@@ -115,12 +124,14 @@ def hapus_billing() :
     tampilkan_billing()
     print(colored(f'billing dengan ID {id_billing} berhasil dihapus', 'green'))
   else :
-    print(colored('Mohon masukan ID billing yang tersedia', 'red'))
-    return halaman_billing()
+    return hapus_billing(colored('ID billing tidak ditemukan', 'red'))
 
-def edit_billing() :
+def edit_billing(pesan_error = False) :
   print()
   tampilkan_billing()
+
+  if pesan_error :
+    print(pesan_error)
 
   id = int(input('ID billing : '))
   billing = get_by_id('billing', id)
@@ -128,57 +139,57 @@ def edit_billing() :
   if billing :
     pelanggan = get_by_id('pelanggan', billing['id_pelanggan'])
 
-    if pelanggan :
-      nama_pelanggan = pelanggan['nama']
-      id_pelanggan_lama = pelanggan['id']
-      id_pelanggan = input(f'ID pelanggan ({id_pelanggan_lama}, {nama_pelanggan}) : ') or id_pelanggan_lama
-      id_pelanggan = int(id_pelanggan)
+    id_pelanggan = pelanggan['id']
 
-      tanggal = tanggal_sekarang()
-      waktu_mulai_lama = billing['waktu_mulai']
-      waktu_selesai_lama = billing['waktu_selesai']
-      waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
-      waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
+    tanggal = tanggal_sekarang()
+    waktu_mulai_lama = billing['waktu_mulai']
+    waktu_selesai_lama = billing['waktu_selesai']
+    waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
+    waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
 
-      harga_perjam = get('pengaturan')[0]['harga_perjam']
-      durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
-      total_harga = int(get('pengaturan')[0]['harga_perjam'] * int(durasi.seconds / 3600))
+    harga_perjam = get('pengaturan')[0]['harga_perjam']
+    durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
+    total_harga = int(harga_perjam * int(durasi.seconds / 3600))
 
-      update('billing', {
-        'id': id,
-        'data': {
-          'id_pelanggan': id_pelanggan,
-          'tanggal': tanggal,
-          'waktu_mulai': waktu_mulai,
-          'waktu_selesai': waktu_selesai,
-          'harga': harga_perjam,
-          'total_harga': total_harga
-        }
-      })
-      tampilkan_billing()
-      print(colored(f'Billing dengan ID {id} telah edit', 'green'))
-    else :
-      print(colored('ID pelanggan tidak ditemukan', 'red'))
-      return tambah_billing()
+    update('billing', {
+      'id': id,
+      'data': {
+        'id_pelanggan': id_pelanggan,
+        'tanggal': tanggal,
+        'waktu_mulai': waktu_mulai,
+        'waktu_selesai': waktu_selesai,
+        'harga': harga_perjam,
+        'total_harga': total_harga
+      }
+    })
+    tampilkan_billing()
+    print(colored(f'Billing dengan ID {id} telah edit', 'green'))
   else :
-    print(colored('ID billing tidak ditemukan', 'red'))
-    return edit_billing()
+    return edit_billing(colored('ID billing tidak ditemukan', 'red'))
 
-def tambah_billing() :
+def tambah_billing(pesan_error = False) :
   print()
   tampilkan_pelanggan()
 
+  if pesan_error :
+    print(pesan_error)
+
   id = get_last_id('billing')
   id_pelanggan = int(input('ID pelanggan : '))
-  tanggal = tanggal_sekarang()
-  waktu_mulai = input(f'Waktu mulai ({waktu_sekarang()}) : ') or waktu_sekarang()
-  waktu_selesai = input('Waktu selesai : ')
-
-  harga_perjam = get('pengaturan')[0]['harga_perjam']
-  durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
-  total_harga = int(get('pengaturan')[0]['harga_perjam'] * int(durasi.seconds / 3600))
 
   if get_by_id('pelanggan', id_pelanggan) :
+    durasi = int(input('Durasi (jam) : '))
+
+    waktu_mulai = datetime.now()
+    waktu_selesai = waktu_mulai + timedelta(hours=durasi)
+    tanggal = tanggal_sekarang()
+
+    waktu_mulai = waktu_mulai.strftime('%H:%M')
+    waktu_selesai = waktu_selesai.strftime('%H:%M')
+
+    harga_perjam = get('pengaturan')[0]['harga_perjam']
+    total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
+
     create('billing', {
       'id': id + 1,
       'id_pelanggan': id_pelanggan,
@@ -191,8 +202,7 @@ def tambah_billing() :
     tampilkan_billing()
     print(colored('Billing telah ditambahkan', 'green'))
   else :
-    print(colored('ID pelanggan tidak ditemukan', 'red'))
-    return tambah_billing()
+    return tambah_billing(colored('ID pelanggan tidak ditemukan', 'red'))
 
 
 def tampilkan_billing() :
@@ -253,13 +263,16 @@ def halaman_billing(tampilkan_menu = True) :
   elif pilihan == 0 :
     return halaman_user()
   else :
-    print(colored('Mohon pilih pilihan yang tersedia', 'red'))
+    print(colored('Pilihan tidak ditemukan', 'red'))
     return halaman_billing()
 
 # ============================================================================================================================== #
 
-def hapus_pelanggan() :
+def hapus_pelanggan(pesan_error = False) :
   tampilkan_pelanggan()
+
+  if pesan_error :
+    print(pesan_error)  
 
   id_pelanggan = int(input('ID : '))
   pelanggan = get_by_id('pelanggan', id_pelanggan)
@@ -269,11 +282,13 @@ def hapus_pelanggan() :
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} berhasil dihapus', 'green'))
   else :
-    print(colored('Mohon masukan ID pelanggan yang tersedia', 'red'))
-    return hapus_pelanggan()
+    return hapus_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
-def edit_pelanggan() :
+def edit_pelanggan(pesan_error = False) :
   tampilkan_pelanggan()
+
+  if pesan_error :
+    print(pesan_error)
 
   id_pelanggan = int(input('ID : '))
   pelanggan = get_by_id('pelanggan', id_pelanggan)
@@ -290,8 +305,7 @@ def edit_pelanggan() :
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} telah diedit', 'green'))
   else :
-    print(colored('Mohon masukan ID pelanggan yang tersedia', 'red'))
-    return edit_pelanggan()
+    return edit_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
 def tambah_pelanggan() :
   print()
@@ -351,7 +365,7 @@ def halaman_pelanggan(tampilkan_menu = True) :
   elif pilihan == 0 :
     return halaman_user()
   else :
-    print(colored('Mohon pilih pilihan yang tersedia', 'red'))
+    print(colored('Pilihan tidak tersedia', 'red'))
     return halaman_pelanggan()
 
 # ============================================================================================================================== #
@@ -366,15 +380,19 @@ def pilihan_menu_halaman_user() :
   return int(input('Pilih : '))
 
 def halaman_user() :
-  pilihan = pilihan_menu_halaman_user()
-  if pilihan == 1 :
-    return halaman_billing()
-  elif pilihan == 2 :
-    return halaman_pelanggan()
-  elif pilihan == 0 :
-    return aplikasi()
-  else :
-    print(colored('Mohon pilih pilihan yang tersedia', 'red'))
+  try :
+    pilihan = pilihan_menu_halaman_user()
+    if pilihan == 1 :
+      return halaman_billing()
+    elif pilihan == 2 :
+      return halaman_pelanggan()
+    elif pilihan == 0 :
+      return aplikasi()
+    else :
+      print(colored('Pilihan tidak tersedia', 'red'))
+      return halaman_user()
+  except KeyboardInterrupt :
+    print()
     return halaman_user()
 
 def login_user() :
@@ -386,6 +404,7 @@ def login_user() :
 
   for i in range(len(pengguna)) :
     if username == pengguna[i]['username'] and password == pengguna[i]['password'] :
+      bersihkan_console()
       return True
   
   print(colored('Username atau password tidak benar\n', 'red'))
@@ -411,7 +430,7 @@ def aplikasi() :
       print('\n\nBye ^^')
       return
     else :
-      print(colored('Mohon pilih pilihan yang tersedia', 'red'))
+      print(colored('Pilihan tidak tersedia', 'red'))
 
 try :
   aplikasi()
