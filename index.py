@@ -328,6 +328,7 @@ def tambah_pelanggan() :
   print(colored('Pelanggan telah ditambahkan', 'green'))
 
 def tampilkan_pelanggan() :
+  print()
   print('Daftar Pelanggan :')
 
   tabel = PrettyTable()
