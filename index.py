@@ -8,11 +8,11 @@ import os
 if os.name.lower() == 'windows' :
   os.system('color')
 
-def bersihkan_console() :
-  if os.name.lower() == 'windows' :
-    os.system('cls')
-  else :
-    os.system('clear')
+# def bersihkan_console() :
+#   if os.name.lower() == 'windows' :
+#     os.system('cls')
+#   else :
+#     os.system('clear')
 
 def waktu_sekarang() :
   return datetime.now().strftime('%H:%M')
@@ -235,16 +235,20 @@ def tampilkan_billing() :
   print(tabel)
 
 def pilihan_menu_halaman_billing(tampilkan_menu = True) :
-  print()
-  if tampilkan_menu :
-    print('== Halaman Billing ==')
-    print('[1] Tampilkan Billing')
-    print('[2] Tambah Billing')
-    print('[3] Edit Billing')
-    print('[4] Hapus Billing')
-    print('[0] Kembali')
+  try :
+    print()
+    if tampilkan_menu :
+      print('== Halaman Billing ==')
+      print('[1] Tampilkan Billing')
+      print('[2] Tambah Billing')
+      print('[3] Edit Billing')
+      print('[4] Hapus Billing')
+      print('[0] Kembali')
 
-  return int(input('Pilih : '))
+    return int(input('Pilih : '))
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_billing()
 
 def halaman_billing(tampilkan_menu = True) :
   pilihan = pilihan_menu_halaman_billing(tampilkan_menu)
@@ -281,6 +285,8 @@ def hapus_pelanggan(pesan_error = False) :
     delete('pelanggan', id_pelanggan)
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} berhasil dihapus', 'green'))
+
+    return halaman_pelanggan(False)
   else :
     return hapus_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
@@ -304,6 +310,8 @@ def edit_pelanggan(pesan_error = False) :
 
     tampilkan_pelanggan()
     print(colored(f'Pelanggan dengan ID {id_pelanggan} telah diedit', 'green'))
+
+    return halaman_pelanggan(False)
   else :
     return edit_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
 
@@ -318,8 +326,9 @@ def tambah_pelanggan() :
   tampilkan_pelanggan()
   print(colored('Pelanggan telah ditambahkan', 'green'))
 
+  return halaman_pelanggan(False)
+
 def tampilkan_pelanggan() :
-  print()
   print('Daftar Pelanggan :')
 
   tabel = PrettyTable()
@@ -336,32 +345,35 @@ def tampilkan_pelanggan() :
 
   print(tabel)
 
-def pilihan_menu_halaman_pelanggan(tampilkan_menu = True) :
-  print()
-  if tampilkan_menu :
-    print('== Halaman Pelanggan ==')
-    print('[1] Tampilkan Pelanggan')
-    print('[2] Tambah Pelanggan')
-    print('[3] Edit Pelanggan')
-    print('[4] Hapus Pelanggan')
-    print('[0] Kembali')
+  return halaman_pelanggan(False)
 
-  return int(input('Pilih : '))
+def pilihan_menu_halaman_pelanggan(tampilkan_menu = True) :
+  try :
+    print()
+    if tampilkan_menu :
+      print('== Halaman Pelanggan ==')
+      print('[1] Tampilkan Pelanggan')
+      print('[2] Tambah Pelanggan')
+      print('[3] Edit Pelanggan')
+      print('[4] Hapus Pelanggan')
+      print('[0] Kembali')
+
+    pilihan = int(input('Pilih : '))
+    return pilihan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_pelanggan()
 
 def halaman_pelanggan(tampilkan_menu = True) :
   pilihan = pilihan_menu_halaman_pelanggan(tampilkan_menu)
   if pilihan == 1 :
-    tampilkan_pelanggan()
-    return halaman_pelanggan(False)
+    return tampilkan_pelanggan()
   elif pilihan == 2 :
-    tambah_pelanggan()
-    return halaman_pelanggan(False)
+    return tambah_pelanggan()
   elif pilihan == 3 :
-    edit_pelanggan()
-    return halaman_pelanggan(False)
+    return edit_pelanggan()
   elif pilihan == 4 :
-    hapus_pelanggan()
-    return halaman_pelanggan(False)
+    return hapus_pelanggan()
   elif pilihan == 0 :
     return halaman_user()
   else :
@@ -371,13 +383,18 @@ def halaman_pelanggan(tampilkan_menu = True) :
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_user() :
-  print()
-  print('== Halaman user ==')
-  print('[1] Billing')
-  print('[2] Pelanggan')
-  print('[0] Keluar')
+  try :
+    print()
+    print('== Halaman user ==')
+    print('[1] Billing')
+    print('[2] Pelanggan')
+    print('[0] Keluar')
 
-  return int(input('Pilih : '))
+    piilhan = int(input('Pilih : '))
+    return piilhan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_user()
 
 def halaman_user() :
   try :
@@ -404,10 +421,9 @@ def login_user() :
 
   for i in range(len(pengguna)) :
     if username == pengguna[i]['username'] and password == pengguna[i]['password'] :
-      bersihkan_console()
       return True
   
-  print(colored('Username atau password tidak benar\n', 'red'))
+  print(colored('Username atau password tidak benar', 'red'))
   return login_user()
 
 # ============================================================================================================================== #
@@ -420,7 +436,11 @@ def aplikasi() :
     print('[2] Admin')
     print('[0] Keluar')
 
-    pilihan = int(input('Pilih : '))
+    try :
+      pilihan = int(input('Pilih : '))
+    except ValueError :
+      print(colored('Pilihan tidak tersedia', 'red'))
+      return aplikasi()
 
     if pilihan == 1 :
       if login_user() :
