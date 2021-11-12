@@ -152,7 +152,6 @@ def tambah_billing(pesan_error = False) :
     print(pesan_error)
 
   try :
-    id = get_last_id('billing')
     id_member = int(input('ID member : '))
   except ValueError :
     return tambah_billing(colored('ID member tidak ditemukan', 'red'))
@@ -301,7 +300,6 @@ def edit_member(pesan_error = False) :
 def tambah_member() :
   print()
 
-  id = get_last_id('member')
   nama = input('Nama : ')
   tanggal_bergabung = tanggal_sekarang()
 
