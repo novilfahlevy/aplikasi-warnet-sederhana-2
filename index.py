@@ -136,6 +136,7 @@ def edit_billing(pesan_error = False) :
         'total_harga': total_harga
       }
     })
+    
     tampilkan_billing()
     print(colored(f'Billing dengan ID {id} telah edit', 'green'))
   else :
@@ -148,15 +149,17 @@ def tambah_billing(pesan_error = False) :
   if pesan_error :
     print(pesan_error)
 
-  id = get_last_id('billing')
-  id_member = int(input('ID member : '))
+  try :
+    id = get_last_id('billing')
+    id_member = int(input('ID member : '))
+  except ValueError :
+    return tambah_billing(colored('ID member tidak ditemukan', 'red'))
 
   if get_by_id('member', id_member) :
     try :
       durasi = int(input('Durasi (jam) : '))
     except ValueError :
-      print(colored('Masukan durasi berdasarkan jam', 'red'))
-      return tambah_billing()
+      return tambah_billing(colored('Masukan durasi berdasarkan jam', 'red'))
 
     waktu_mulai = datetime.now()
     waktu_selesai = waktu_mulai + timedelta(hours=durasi)
@@ -177,6 +180,7 @@ def tambah_billing(pesan_error = False) :
       'harga': harga_perjam,
       'total_harga': total_harga
     })
+
     tampilkan_billing()
     print(colored('Billing telah ditambahkan', 'green'))
   else :
