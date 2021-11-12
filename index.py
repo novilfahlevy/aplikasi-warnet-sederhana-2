@@ -51,11 +51,13 @@ def get_by_id(field, id) :
 
 def get_last_id(field) :
   data_db = sorted(get(field), key=lambda data: data['id'], reverse=True)
-  return data_db[0]['id'] if len(data_db) > 0 else False
+  return data_db[0]['id'] if len(data_db) > 0 else 0
 
 def create(field, data) :
   data_db = get()
   data_db[field] = get(field)
+
+  data['id'] = get_last_id(field) + 1
   data_db[field].append(data)
 
   timpa_db(data_db)
@@ -172,7 +174,6 @@ def tambah_billing(pesan_error = False) :
     total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
 
     create('billing', {
-      'id': id + 1,
       'id_member': id_member,
       'tanggal': tanggal,
       'waktu_mulai': waktu_mulai,
@@ -304,7 +305,7 @@ def tambah_member() :
   nama = input('Nama : ')
   tanggal_bergabung = tanggal_sekarang()
 
-  create('member', { 'id': id + 1, 'nama': nama, 'tanggal_bergabung': tanggal_bergabung })
+  create('member', { 'nama': nama, 'tanggal_bergabung': tanggal_bergabung })
   tampilkan_member()
   print(colored('Member telah ditambahkan', 'green'))
 
