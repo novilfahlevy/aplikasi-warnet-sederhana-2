@@ -29,32 +29,6 @@ def buat_file_database_json(database) :
       file_database.write(json.dumps(database))
       file_database.close()
 
-buat_file_database_json({
-  "pengguna": [
-    {"id": 1, "username": "admin", "password": "admin", "role": "admin"},
-    {"id": 3, "username": "admin2", "password": "admin2", "role": "admin"}
-  ],
-  "pelanggan": [
-    { "id": 1, "nama": "Novil", "tanggal_bergabung": tanggal_sekarang() },
-    { "id": 2, "nama": "Rizki Perdana", "tanggal_bergabung": tanggal_sekarang() },
-    { "id": 3, "nama": "Ibnu Praditya", "tanggal_bergabung": tanggal_sekarang() },
-  ],
-  "billing": [
-    {
-      "id": 1,
-      "id_pelanggan": 2,
-      "tanggal": tanggal_sekarang(),
-      "waktu_mulai": '13:00',
-      "waktu_selesai": '14:00',
-      "harga": 8000,
-      'total_harga': 8000
-    },
-  ],
-  "pengaturan": [
-    { "id": 1, "harga_perjam": 8000 }
-  ]
-})
-
 def timpa_db(data) :
   file_database = open('database.json', 'w')
   file_database.write(json.dumps(data))
@@ -137,9 +111,9 @@ def edit_billing(pesan_error = False) :
   billing = get_by_id('billing', id)
 
   if billing :
-    pelanggan = get_by_id('pelanggan', billing['id_pelanggan'])
+    member = get_by_id('member', billing['id_member'])
 
-    id_pelanggan = pelanggan['id']
+    id_member = member['id']
 
     tanggal = tanggal_sekarang()
     waktu_mulai_lama = billing['waktu_mulai']
@@ -154,7 +128,7 @@ def edit_billing(pesan_error = False) :
     update('billing', {
       'id': id,
       'data': {
-        'id_pelanggan': id_pelanggan,
+        'id_member': id_member,
         'tanggal': tanggal,
         'waktu_mulai': waktu_mulai,
         'waktu_selesai': waktu_selesai,
@@ -169,15 +143,15 @@ def edit_billing(pesan_error = False) :
 
 def tambah_billing(pesan_error = False) :
   print()
-  tampilkan_pelanggan()
+  tampilkan_member()
 
   if pesan_error :
     print(pesan_error)
 
   id = get_last_id('billing')
-  id_pelanggan = int(input('ID pelanggan : '))
+  id_member = int(input('ID member : '))
 
-  if get_by_id('pelanggan', id_pelanggan) :
+  if get_by_id('member', id_member) :
     try :
       durasi = int(input('Durasi (jam) : '))
     except ValueError :
@@ -196,7 +170,7 @@ def tambah_billing(pesan_error = False) :
 
     create('billing', {
       'id': id + 1,
-      'id_pelanggan': id_pelanggan,
+      'id_member': id_member,
       'tanggal': tanggal,
       'waktu_mulai': waktu_mulai,
       'waktu_selesai': waktu_selesai,
@@ -206,7 +180,7 @@ def tambah_billing(pesan_error = False) :
     tampilkan_billing()
     print(colored('Billing telah ditambahkan', 'green'))
   else :
-    return tambah_billing(colored('ID pelanggan tidak ditemukan', 'red'))
+    return tambah_billing(colored('ID member tidak ditemukan', 'red'))
 
 
 def tampilkan_billing() :
@@ -214,11 +188,11 @@ def tampilkan_billing() :
   print('Daftar Billing :')
 
   tabel = PrettyTable()
-  tabel.field_names = ['No', 'ID', 'Nama Pelanggan', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga']
+  tabel.field_names = ['ID', 'Nama member', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga']
 
   billing = get('billing')
   for i in range(len(billing)) :
-    pelanggan = get_by_id('pelanggan', billing[i]['id_pelanggan'])
+    member = get_by_id('member', billing[i]['id_member'])
     waktu_mulai = billing[i]['waktu_mulai']
     waktu_selesai = billing[i]['waktu_selesai']
     harga = billing[i]['harga']
@@ -226,9 +200,8 @@ def tampilkan_billing() :
     total_harga = int(billing[i]['harga'] * (durasi.seconds / 3600))
 
     tabel.add_row([
-      i + 1,
       billing[i]['id'],
-      pelanggan['nama'] if pelanggan else colored('[Pelanggan Telah Terhapus]', 'yellow'),
+      member['nama'] if member else colored('[Member Telah Terhapus]', 'yellow'),
       billing[i]['tanggal'],
       f'{waktu_mulai} - {waktu_selesai}',
       durasi,
@@ -243,10 +216,10 @@ def pilihan_menu_halaman_billing(tampilkan_menu = True) :
     print()
     if tampilkan_menu :
       print('== Menu Billing ==')
-      print('[1] Tampilkan Billing')
-      print('[2] Tambah Billing')
-      print('[3] Edit Billing')
-      print('[4] Hapus Billing')
+      print('[1] Tampilkan billing')
+      print('[2] Tambah billing')
+      print('[3] Edit billing')
+      print('[4] Hapus billing')
       print('[0] Kembali')
     
     pilihan = int(input('Pilih (pilih 99 untuk menampilkan menu) : '))
@@ -281,123 +254,122 @@ def halaman_billing(tampilkan_menu = True) :
 
 # ============================================================================================================================== #
 
-def hapus_pelanggan(pesan_error = False) :
-  tampilkan_pelanggan()
+def hapus_member(pesan_error = False) :
+  tampilkan_member()
 
   if pesan_error :
     print(pesan_error)  
 
-  id_pelanggan = int(input('ID : '))
-  pelanggan = get_by_id('pelanggan', id_pelanggan)
+  id_member = int(input('ID : '))
+  member = get_by_id('member', id_member)
 
-  if pelanggan :
-    delete('pelanggan', id_pelanggan)
-    tampilkan_pelanggan()
-    print(colored(f'Pelanggan dengan ID {id_pelanggan} berhasil dihapus', 'green'))
+  if member :
+    delete('member', id_member)
+    tampilkan_member()
+    print(colored(f'member dengan ID {id_member} berhasil dihapus', 'green'))
   else :
-    return hapus_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
+    return hapus_member(colored('ID member tidak ditemukan', 'red'))
 
-def edit_pelanggan(pesan_error = False) :
-  tampilkan_pelanggan()
+def edit_member(pesan_error = False) :
+  tampilkan_member()
 
   if pesan_error :
     print(pesan_error)
 
-  id_pelanggan = int(input('ID : '))
-  pelanggan = get_by_id('pelanggan', id_pelanggan)
+  id_member = int(input('ID : '))
+  member = get_by_id('member', id_member)
 
-  if pelanggan :
-    nama_lama = pelanggan['nama']
+  if member :
+    nama_lama = member['nama']
     nama = input(f'Nama ({nama_lama}) : ') or nama_lama
 
-    update('pelanggan', {
-      'id': id_pelanggan,
+    update('member', {
+      'id': id_member,
       'data': { 'nama': nama }
     })
 
-    tampilkan_pelanggan()
-    print(colored(f'Pelanggan dengan ID {id_pelanggan} telah diedit', 'green'))
+    tampilkan_member()
+    print(colored(f'Member dengan ID {id_member} telah diedit', 'green'))
   else :
-    return edit_pelanggan(colored('ID pelanggan tidak ditemukan', 'red'))
+    return edit_member(colored('ID member tidak ditemukan', 'red'))
 
-def tambah_pelanggan() :
+def tambah_member() :
   print()
 
-  id = get_last_id('pelanggan')
+  id = get_last_id('member')
   nama = input('Nama : ')
   tanggal_bergabung = tanggal_sekarang()
 
-  create('pelanggan', { 'id': id + 1, 'nama': nama, 'tanggal_bergabung': tanggal_bergabung })
-  tampilkan_pelanggan()
-  print(colored('Pelanggan telah ditambahkan', 'green'))
+  create('member', { 'id': id + 1, 'nama': nama, 'tanggal_bergabung': tanggal_bergabung })
+  tampilkan_member()
+  print(colored('Member telah ditambahkan', 'green'))
 
-def tampilkan_pelanggan() :
+def tampilkan_member() :
   print()
-  print('Daftar Pelanggan :')
+  print('Daftar member :')
 
   tabel = PrettyTable()
-  tabel.field_names = ['No', 'ID', 'Nama', 'Tanggal Bergabung']
+  tabel.field_names = ['ID', 'Nama', 'Tanggal Bergabung']
 
-  pelanggan = get('pelanggan')
-  for i in range(len(pelanggan)) :
+  member = get('member')
+  for i in range(len(member)) :
     tabel.add_row([
-      i + 1,
-      pelanggan[i]['id'],
-      pelanggan[i]['nama'],
-      pelanggan[i]['tanggal_bergabung']
+      member[i]['id'],
+      member[i]['nama'],
+      member[i]['tanggal_bergabung']
     ])
 
   print(tabel)
 
-def pilihan_menu_halaman_pelanggan(tampilkan_menu = True) :
+def pilihan_menu_halaman_member(tampilkan_menu = True) :
   try :
     print()
     if tampilkan_menu :
-      print('== Menu Pelanggan ==')
-      print('[1] Tampilkan Pelanggan')
-      print('[2] Tambah Pelanggan')
-      print('[3] Edit Pelanggan')
-      print('[4] Hapus Pelanggan')
+      print('== Menu Member ==')
+      print('[1] Tampilkan member')
+      print('[2] Tambah member')
+      print('[3] Edit member')
+      print('[4] Hapus member')
       print('[0] Kembali')
     
     pilihan = int(input('Pilih (99 untuk menampilkan menu) : '))
 
     if pilihan == 99 :
-      return pilihan_menu_halaman_pelanggan()
+      return pilihan_menu_halaman_member()
     
     return pilihan
   except ValueError :
     print(colored('Pilihan tidak tersedia', 'red'))
-    return pilihan_menu_halaman_pelanggan()
+    return pilihan_menu_halaman_member()
 
-def halaman_pelanggan(tampilkan_menu = True) :
-  pilihan = pilihan_menu_halaman_pelanggan(tampilkan_menu)
+def halaman_member(tampilkan_menu = True) :
+  pilihan = pilihan_menu_halaman_member(tampilkan_menu)
   if pilihan == 1 :
-    tampilkan_pelanggan()
-    return halaman_pelanggan(False)
+    tampilkan_member()
+    return halaman_member(False)
   elif pilihan == 2 :
-    tambah_pelanggan()
-    return halaman_pelanggan(False)
+    tambah_member()
+    return halaman_member(False)
   elif pilihan == 3 :
-    edit_pelanggan()
-    return halaman_pelanggan(False)
+    edit_member()
+    return halaman_member(False)
   elif pilihan == 4 :
-    hapus_pelanggan()
-    return halaman_pelanggan(False)
+    hapus_member()
+    return halaman_member(False)
   elif pilihan == 0 :
     halaman_user()
   else :
     print(colored('Pilihan tidak tersedia', 'red'))
-    return halaman_pelanggan()
+    return halaman_member()
 
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_user() :
   try :
     print()
-    print('== Halaman user ==')
+    print('== Halaman Operator ==')
     print('[1] Billing')
-    print('[2] Pelanggan')
+    print('[2] Member')
     print('[0] Keluar')
 
     piilhan = int(input('Pilih : '))
@@ -412,7 +384,7 @@ def halaman_user() :
     if pilihan == 1 :
       return halaman_billing()
     elif pilihan == 2 :
-      return halaman_pelanggan()
+      return halaman_member()
     elif pilihan == 0 :
       return aplikasi()
     else :
@@ -425,13 +397,13 @@ def halaman_user() :
 def login_user() :
   print()
   
-  username = input('Username : ')
+  username = input('Username: ')
   # password = getpass.getpass()
   password = pwinput.pwinput(mask='*')
-  pengguna = get('pengguna')
+  operator = get('operator')
 
-  for i in range(len(pengguna)) :
-    if username == pengguna[i]['username'] and password == pengguna[i]['password'] :
+  for i in range(len(operator)) :
+    if username == operator[i]['username'] and password == operator[i]['password'] :
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
@@ -464,6 +436,31 @@ def aplikasi() :
       print(colored('Pilihan tidak tersedia', 'red'))
 
 try :
+  buat_file_database_json({
+    "operator": [
+      {"id": 1, "username": "admin", "password": "admin", "role": "admin"},
+      {"id": 3, "username": "admin2", "password": "admin2", "role": "admin"}
+    ],
+    "member": [
+      { "id": 1, "nama": "Novil", "tanggal_bergabung": tanggal_sekarang() },
+      { "id": 2, "nama": "Rizki Perdana", "tanggal_bergabung": tanggal_sekarang() },
+      { "id": 3, "nama": "Ibnu Praditya", "tanggal_bergabung": tanggal_sekarang() },
+    ],
+    "billing": [
+      {
+        "id": 1,
+        "id_member": 2,
+        "tanggal": tanggal_sekarang(),
+        "waktu_mulai": '13:00',
+        "waktu_selesai": '14:00',
+        "harga": 8000,
+        'total_harga': 8000
+      },
+    ],
+    "pengaturan": [
+      { "id": 1, "harga_perjam": 8000 }
+    ]
+  })
   aplikasi()
 except KeyboardInterrupt :
   print('\n\nBye ^^')
