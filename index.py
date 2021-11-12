@@ -1,7 +1,7 @@
 from prettytable import PrettyTable
 from datetime import date, datetime, timedelta
 from termcolor import colored
-import getpass
+import pwinput
 import json
 import os
 
@@ -178,7 +178,11 @@ def tambah_billing(pesan_error = False) :
   id_pelanggan = int(input('ID pelanggan : '))
 
   if get_by_id('pelanggan', id_pelanggan) :
-    durasi = int(input('Durasi (jam) : '))
+    try :
+      durasi = int(input('Durasi (jam) : '))
+    except ValueError :
+      print(colored('Masukan durasi berdasarkan jam', 'red'))
+      return tambah_billing()
 
     waktu_mulai = datetime.now()
     waktu_selesai = waktu_mulai + timedelta(hours=durasi)
@@ -422,7 +426,8 @@ def login_user() :
   print()
   
   username = input('Username : ')
-  password = getpass.getpass('Password : ')
+  # password = getpass.getpass()
+  password = pwinput.pwinput(mask='*')
   pengguna = get('pengguna')
 
   for i in range(len(pengguna)) :
