@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from termcolor import colored
 import pwinput
 import json
+import csv
 import os
 
 if os.name.lower() == 'windows' :
@@ -96,7 +97,6 @@ def cek_billing_masih_berlaku(id_billing) :
 
   return f'{tanggal} {waktu_selesai}' > f'{tanggal_sekarang()} {waktu_sekarang()}'
 
-
 def hapus_billing(pesan_error = False) :
   tampilkan_billing()
 
@@ -151,7 +151,7 @@ def edit_billing(pesan_error = False) :
       waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
       waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
 
-      harga_perjam = get('pengaturan')[0]['harga_perjam']
+      harga_perjam = pengaturan("harga_perjam")
       durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
       total_harga = int(harga_perjam * int(durasi.seconds / 3600))
 
@@ -208,7 +208,7 @@ def tambah_billing(pesan_error = False) :
     waktu_mulai = waktu_mulai.strftime('%H:%M')
     waktu_selesai = waktu_selesai.strftime('%H:%M')
 
-    harga_perjam = get('pengaturan')[0]['harga_perjam']
+    harga_perjam = pengaturan("harga_perjam")
     total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
 
     create('billing', {
@@ -226,14 +226,9 @@ def tambah_billing(pesan_error = False) :
   else :
     return tambah_billing(colored('ID member tidak ditemukan', 'red'))
 
-def tampilkan_billing() :
-  print()
-  print('Daftar Billing :')
+def data_billing(billing, color = True) :
+  data = []
 
-  tabel = PrettyTable()
-  tabel.field_names = ['ID', 'PC', 'Nama member', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga', 'Status']
-
-  billing = get('billing')
   for i in range(len(billing)) :
     id_billing = billing[i]['id']
     member = get_by_id('member', billing[i]['id_member'])
@@ -244,7 +239,7 @@ def tampilkan_billing() :
     durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
     total_harga = int(billing[i]['harga'] * (durasi.seconds / 3600))
 
-    tabel.add_row([
+    data.append([
       id_billing,
       pc['label'] if pc else colored('[PC Telah Terhapus]', 'yellow'),
       member['nama'] if member else colored('[Member Telah Terhapus]', 'yellow'),
@@ -253,8 +248,20 @@ def tampilkan_billing() :
       durasi,
       f"Rp {'{:0,.0f}'.format(harga)}",
       f"Rp {'{:0,.0f}'.format(total_harga)}",
-      colored('Masih Berlaku', 'green') if cek_billing_masih_berlaku(id_billing) else 'Selesai'
+      (colored('Masih Berlaku', 'green') if color else 'Masih Berlaku') if cek_billing_masih_berlaku(id_billing) else 'Selesai'
     ])
+
+  return data
+
+def tampilkan_billing() :
+  print()
+  print('Daftar Billing :')
+
+  tabel = PrettyTable()
+  tabel.field_names = ['ID', 'PC', 'Nama member', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga', 'Status']
+
+  billing = get('billing')
+  tabel.add_rows(data_billing(billing))
 
   print(tabel)
 
@@ -658,6 +665,81 @@ def halaman_user(tampilkan_menu = True) :
 
 # ============================================================================================================================== #
 
+def laporan_csv() :
+  dari_tanggal = input('Dari tanggal [dd-mm-yyyy] (opsional) : ')
+  sampai_tanggal = input('Sampai tanggal [dd-mm-yyyy] (opsional) : ')
+  billing = get('billing')
+
+  if dari_tanggal == '' and sampai_tanggal != '' :
+    billing = list(filter(lambda b: b['tanggal'] <= sampai_tanggal, billing))
+  elif dari_tanggal != '' and sampai_tanggal == '' :
+    billing = list(filter(lambda b: b['tanggal'] >= dari_tanggal, billing))
+  elif dari_tanggal != '' and sampai_tanggal != '' :
+    billing = list(filter(lambda b: b['tanggal'] >= dari_tanggal and b['tanggal'] <= sampai_tanggal, billing))
+
+  # sumber https://www.pythontutorial.net/python-basics/python-write-csv-file/
+  with open('siwarnet_laporan.csv', 'w') as f :
+    # create the csv writer
+    writer = csv.writer(f)
+
+    # write a row to the csv file
+    writer.writerows(data_billing(billing, color=False))
+
+  print()
+  print(colored(f'Laporan telah disimpan di {colored(os.path.dirname(os.path.abspath(__file__)) + "/siwarnet_laporan.csv", "yellow")}', 'green'))
+  return halaman_admin()
+
+# ============================================================================================================================= #
+
+def pengaturan(nama_pengaturan) :
+  return get('pengaturan')[0][nama_pengaturan]
+
+def pengaturan_harga_perjam() :
+  try :
+    harga_lama = pengaturan("harga_perjam")
+    harga = input(f'Harga perjam (Rp {"{:0,.0f}".format(harga_lama)}) : ') or harga_lama
+    harga = int(harga)
+
+    update('pengaturan', {
+      'id': 1,
+      'data': { 'harga_perjam': harga }
+    })
+
+    print(colored('Pengaturan harga perjam berhasil diubah', 'green'))
+    return halaman_pengaturan()
+  except ValueError :
+    print(colored('Input tidak valid', 'red'))
+    return pengaturan_harga_perjam()
+
+def pilihan_menu_halaman_pengaturan() :
+  try :
+    print()
+    print('== Pengaturan ==')
+    print(f'[1] Harga Perjam (Rp {"{:0,.0f}".format(pengaturan("harga_perjam"))})')
+    print('[0] Keluar')
+
+    piilhan = int(input('Pilih : '))
+    return piilhan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_pengaturan()
+
+def halaman_pengaturan() :
+  try :
+    pilihan = pilihan_menu_halaman_pengaturan()
+    if pilihan == 1 :
+      return pengaturan_harga_perjam()
+    elif pilihan == 0 :
+      return halaman_admin()
+    else :
+      print(colored('Pilihan tidak tersedia', 'red'))
+      return halaman_pengaturan()
+  except KeyboardInterrupt :
+    print()
+    return halaman_admin()
+
+# ============================================================================================================================== #
+
 def pilihan_menu_halaman_admin() :
   try :
     print()
@@ -679,8 +761,12 @@ def halaman_admin() :
     pilihan = pilihan_menu_halaman_admin()
     if pilihan == 1 :
       return halaman_pc()
-    if pilihan == 2 :
+    elif pilihan == 2 :
       return halaman_user()
+    elif pilihan == 3 :
+      return halaman_pengaturan()
+    elif pilihan == 4 :
+      return laporan_csv()
     elif pilihan == 0 :
       return aplikasi()
     else :
