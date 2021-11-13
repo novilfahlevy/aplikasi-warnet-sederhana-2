@@ -84,7 +84,18 @@ def delete(field, id) :
 
   timpa_db(data_db)
 
+def get_user_by_role(role) :
+  return list(filter(lambda user: user['role'] == role, get('user')))
+
 # ============================================================================================================================== #
+
+def cek_billing_masih_berlaku(id_billing) :
+  billing = get_by_id('billing', id_billing)
+  tanggal = billing['tanggal']
+  waktu_selesai = billing['waktu_selesai']
+
+  return f'{tanggal} {waktu_selesai}' > f'{tanggal_sekarang()} {waktu_sekarang()}'
+
 
 def hapus_billing(pesan_error = False) :
   tampilkan_billing()
@@ -109,38 +120,58 @@ def edit_billing(pesan_error = False) :
   if pesan_error :
     print(pesan_error)
 
-  id = int(input('ID billing : '))
-  billing = get_by_id('billing', id)
+  try :
+    id_billing = int(input('ID billing : '))
+    billing = get_by_id('billing', id_billing)
+  except ValueError :
+    return edit_billing(colored('ID billing tidak ditemukan', 'red'))
 
   if billing :
     member = get_by_id('member', billing['id_member'])
-
     id_member = member['id']
 
-    tanggal = tanggal_sekarang()
-    waktu_mulai_lama = billing['waktu_mulai']
-    waktu_selesai_lama = billing['waktu_selesai']
-    waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
-    waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
+    pc_lama = get_by_id('pc', billing['id_pc'])
+    id_pc_lama = pc_lama['id']
+    label_pc_lama = pc_lama['label']
 
-    harga_perjam = get('pengaturan')[0]['harga_perjam']
-    durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
-    total_harga = int(harga_perjam * int(durasi.seconds / 3600))
+    try :
+      id_pc = input(f'ID PC ({label_pc_lama}) : ') or id_pc_lama
+      id_pc = int(id_pc)
+      pc = get_by_id('pc', id_pc)
 
-    update('billing', {
-      'id': id,
-      'data': {
-        'id_member': id_member,
-        'tanggal': tanggal,
-        'waktu_mulai': waktu_mulai,
-        'waktu_selesai': waktu_selesai,
-        'harga': harga_perjam,
-        'total_harga': total_harga
-      }
-    })
-    
-    tampilkan_billing()
-    print(colored(f'Billing dengan ID {id} telah edit', 'green'))
+      if cek_pc_masih_dipakai(id_pc) and (id_pc != id_pc_lama) :
+        return tambah_billing(colored('PC masih dipakai'))
+    except ValueError :
+      return edit_billing(colored('ID PC tidak ditemukan', 'red'))
+
+    if pc :
+      tanggal = tanggal_sekarang()
+      waktu_mulai_lama = billing['waktu_mulai']
+      waktu_selesai_lama = billing['waktu_selesai']
+      waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
+      waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
+
+      harga_perjam = get('pengaturan')[0]['harga_perjam']
+      durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
+      total_harga = int(harga_perjam * int(durasi.seconds / 3600))
+
+      update('billing', {
+        'id': id_billing,
+        'data': {
+          'id_pc': id_pc,
+          'id_member': id_member,
+          'tanggal': tanggal,
+          'waktu_mulai': waktu_mulai,
+          'waktu_selesai': waktu_selesai,
+          'harga': harga_perjam,
+          'total_harga': total_harga
+        }
+      })
+      
+      tampilkan_billing()
+      print(colored(f'Billing dengan ID {id_billing} telah edit', 'green'))
+    else :
+      return edit_billing(colored('ID PC tidak ditemukan', 'red'))
   else :
     return edit_billing(colored('ID billing tidak ditemukan', 'red'))
 
@@ -155,8 +186,16 @@ def tambah_billing(pesan_error = False) :
     id_member = int(input('ID member : '))
   except ValueError :
     return tambah_billing(colored('ID member tidak ditemukan', 'red'))
+  
+  try :
+    id_pc = int(input('ID PC : '))
 
-  if get_by_id('member', id_member) :
+    if cek_pc_masih_dipakai(id_pc) :
+      return tambah_billing(colored('PC masih dipakai'))
+  except ValueError :
+    return tambah_billing(colored('ID PC tidak ditemukan', 'red'))
+
+  if get_by_id('member', id_member) and get_by_id('pc', id_pc) :
     try :
       durasi = int(input('Durasi (jam) : '))
     except ValueError :
@@ -173,6 +212,7 @@ def tambah_billing(pesan_error = False) :
     total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
 
     create('billing', {
+      'id_pc': id_pc,
       'id_member': id_member,
       'tanggal': tanggal,
       'waktu_mulai': waktu_mulai,
@@ -186,17 +226,18 @@ def tambah_billing(pesan_error = False) :
   else :
     return tambah_billing(colored('ID member tidak ditemukan', 'red'))
 
-
 def tampilkan_billing() :
   print()
   print('Daftar Billing :')
 
   tabel = PrettyTable()
-  tabel.field_names = ['ID', 'Nama member', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga']
+  tabel.field_names = ['ID', 'PC', 'Nama member', 'Tanggal', 'Waktu', 'Durasi (jam)', 'Harga', 'Total Harga', 'Status']
 
   billing = get('billing')
   for i in range(len(billing)) :
+    id_billing = billing[i]['id']
     member = get_by_id('member', billing[i]['id_member'])
+    pc = get_by_id('pc', billing[i]['id_pc'])
     waktu_mulai = billing[i]['waktu_mulai']
     waktu_selesai = billing[i]['waktu_selesai']
     harga = billing[i]['harga']
@@ -204,13 +245,15 @@ def tampilkan_billing() :
     total_harga = int(billing[i]['harga'] * (durasi.seconds / 3600))
 
     tabel.add_row([
-      billing[i]['id'],
+      id_billing,
+      pc['label'] if pc else colored('[PC Telah Terhapus]', 'yellow'),
       member['nama'] if member else colored('[Member Telah Terhapus]', 'yellow'),
       billing[i]['tanggal'],
       f'{waktu_mulai} - {waktu_selesai}',
       durasi,
       f"Rp {'{:0,.0f}'.format(harga)}",
       f"Rp {'{:0,.0f}'.format(total_harga)}",
+      colored('Masih Berlaku', 'green') if cek_billing_masih_berlaku(id_billing) else 'Selesai'
     ])
 
   print(tabel)
@@ -367,7 +410,7 @@ def halaman_member(tampilkan_menu = True) :
 
 # ============================================================================================================================== #
 
-def pilihan_menu_halaman_user() :
+def pilihan_menu_halaman_operator() :
   try :
     print()
     print('== Halaman Operator ==')
@@ -379,11 +422,11 @@ def pilihan_menu_halaman_user() :
     return piilhan
   except ValueError :
     print(colored('Pilihan tidak tersedia', 'red'))
-    return pilihan_menu_halaman_user()
+    return pilihan_menu_halaman_operator()
 
-def halaman_user() :
+def halaman_operator() :
   try :
-    pilihan = pilihan_menu_halaman_user()
+    pilihan = pilihan_menu_halaman_operator()
     if pilihan == 1 :
       return halaman_billing()
     elif pilihan == 2 :
@@ -392,25 +435,277 @@ def halaman_user() :
       return aplikasi()
     else :
       print(colored('Pilihan tidak tersedia', 'red'))
-      return halaman_user()
+      return halaman_operator()
   except KeyboardInterrupt :
     print()
-    return halaman_user()
+    return halaman_operator()
 
-def login_user() :
+def login_operator() :
   print()
   
-  username = input('Username: ')
-  # password = getpass.getpass()
-  password = pwinput.pwinput(mask='*')
-  operator = get('operator')
+  try :
+    username = input('Username: ')
+    password = pwinput.pwinput(mask='*')
+    operator = get_user_by_role('operator')
+  except KeyboardInterrupt :
+    return aplikasi()
 
   for i in range(len(operator)) :
     if username == operator[i]['username'] and password == operator[i]['password'] :
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
-  return login_user()
+  return login_operator()
+
+# ============================================================================================================================== #
+
+def cek_pc_masih_dipakai(id_pc) :
+  billing_dengan_pc_ini = list(filter(lambda b: b['id_pc'] == id_pc, get('billing')))
+  for i in range(len(billing_dengan_pc_ini)) :
+    if cek_billing_masih_berlaku(billing_dengan_pc_ini[i]['id']) :
+      return True
+  
+  return False
+
+def hapus_pc(pesan_error = False) :
+  tampilkan_pc()
+
+  if pesan_error :
+    print(pesan_error)  
+
+  id_pc = int(input('ID : '))
+  pc = get_by_id('pc', id_pc)
+
+  if pc :
+    delete('pc', id_pc)
+    tampilkan_pc()
+    print(colored(f'PC dengan ID {id_pc} berhasil dihapus', 'green'))
+  else :
+    return hapus_pc(colored('ID pc tidak ditemukan', 'red'))
+
+def edit_pc(pesan_error = False) :
+  tampilkan_pc()
+
+  if pesan_error :
+    print(pesan_error)
+
+  id_pc = int(input('ID : '))
+  pc = get_by_id('pc', id_pc)
+
+  if pc :
+    label_lama = pc['label']
+    label = input(f'label ({label_lama}) : ') or label_lama
+
+    update('pc', {
+      'id': id_pc,
+      'data': { 'label': label }
+    })
+
+    tampilkan_pc()
+    print(colored(f'PC dengan ID {id_pc} telah diedit', 'green'))
+  else :
+    return edit_pc(colored('ID pc tidak ditemukan', 'red'))
+
+def tambah_pc() :
+  print()
+
+  label = input('label : ')
+
+  create('pc', { 'label': label })
+  tampilkan_pc()
+  print(colored('PC telah ditambahkan', 'green'))
+
+def tampilkan_pc() :
+  print()
+  print('Daftar pc :')
+
+  tabel = PrettyTable()
+  tabel.field_names = ['ID', 'Label', 'Status']
+
+  pcs = get('pc')
+  for i in range(len(pcs)) :
+    tabel.add_row([
+      pcs[i]['id'],
+      pcs[i]['label'],
+      colored('Masih Dipakai', 'yellow') if cek_pc_masih_dipakai(pcs[i]['id']) else 'Kosong'
+    ])
+
+  print(tabel)
+
+def pilihan_menu_halaman_pc(tampilkan_menu = True) :
+  try :
+    print()
+    if tampilkan_menu :
+      print('== Menu PC ==')
+      print('[1] Tampilkan pc')
+      print('[2] Tambah pc')
+      print('[3] Edit pc')
+      print('[4] Hapus pc')
+      print('[0] Kembali')
+    
+    pilihan = int(input('Pilih (99 untuk menampilkan menu) : '))
+
+    if pilihan == 99 :
+      return pilihan_menu_halaman_pc()
+    
+    return pilihan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_pc()
+
+def halaman_pc(tampilkan_menu = True) :
+  pilihan = pilihan_menu_halaman_pc(tampilkan_menu)
+  if pilihan == 1 :
+    tampilkan_pc()
+    return halaman_pc(False)
+  elif pilihan == 2 :
+    tambah_pc()
+    return halaman_pc(False)
+  elif pilihan == 3 :
+    edit_pc()
+    return halaman_pc(False)
+  elif pilihan == 4 :
+    hapus_pc()
+    return halaman_pc(False)
+  elif pilihan == 0 :
+    halaman_admin()
+  else :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return halaman_pc()
+
+# ============================================================================================================================== #
+
+def hapus_user(pesan_error = False) :
+  tampilkan_user()
+
+  if pesan_error :
+    print(pesan_error)
+
+  id_user = int(input('ID : '))
+  user = get_by_id('user', id_user)
+
+  if user :
+    delete('user', id_user)
+    tampilkan_user()
+    print(colored(f'User dengan ID {id_user} berhasil dihapus', 'green'))
+  else :
+    return hapus_user(colored('ID user tidak ditemukan', 'red'))
+
+def tambah_user() :
+  print()
+
+  username = input('Username: ')
+  password = pwinput.pwinput(mask="*")
+  role = input('Role (admin/operator): ').lower()
+
+  if role not in ['admin', 'operator'] :
+    print(colored('Role tidak sesuai', 'red'))
+    return tambah_user()
+
+  create('user', { 'username': username, 'password': password, 'role': role })
+  tampilkan_user()
+  print(colored('User telah ditambahkan', 'green'))
+
+def tampilkan_user() :
+  print()
+  print('Daftar user :')
+
+  tabel = PrettyTable()
+  tabel.field_names = ['ID', 'Username', 'Role']
+
+  users = get('user')
+  for i in range(len(users)) :
+    tabel.add_row([users[i]['id'], users[i]['username'], users[i]['role']])
+
+  print(tabel)
+
+def pilihan_menu_halaman_user(tampilkan_menu = True) :
+  try :
+    print()
+    if tampilkan_menu :
+      print('== Menu User ==')
+      print('[1] Tampilkan user')
+      print('[2] Tambah user')
+      print('[3] Hapus user')
+      print('[0] Kembali')
+    
+    pilihan = int(input('Pilih (99 untuk menampilkan menu) : '))
+
+    if pilihan == 99 :
+      return pilihan_menu_halaman_user()
+    
+    return pilihan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_user()
+
+def halaman_user(tampilkan_menu = True) :
+  pilihan = pilihan_menu_halaman_user(tampilkan_menu)
+  if pilihan == 1 :
+    tampilkan_user()
+    return halaman_user(False)
+  elif pilihan == 2 :
+    tambah_user()
+    return halaman_user(False)
+  elif pilihan == 3 :
+    hapus_user()
+    return halaman_user(False)
+  elif pilihan == 0 :
+    halaman_admin()
+  else :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return halaman_user()
+
+# ============================================================================================================================== #
+
+def pilihan_menu_halaman_admin() :
+  try :
+    print()
+    print('== Halaman Admin ==')
+    print('[1] PC')
+    print('[2] User')
+    print('[3] Pengaturan')
+    print('[4] Laporan CSV')
+    print('[0] Keluar')
+
+    piilhan = int(input('Pilih : '))
+    return piilhan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_menu_halaman_user()
+
+def halaman_admin() :
+  try :
+    pilihan = pilihan_menu_halaman_admin()
+    if pilihan == 1 :
+      return halaman_pc()
+    if pilihan == 2 :
+      return halaman_user()
+    elif pilihan == 0 :
+      return aplikasi()
+    else :
+      print(colored('Pilihan tidak tersedia', 'red'))
+      return halaman_admin()
+  except KeyboardInterrupt :
+    print()
+    return halaman_admin()
+
+def login_admin() :
+  print()
+  
+  try :
+    username = input('Username: ')
+    password = pwinput.pwinput(mask='*')
+    operator = get_user_by_role('admin')
+  except KeyboardInterrupt :
+    return aplikasi()
+
+  for i in range(len(operator)) :
+    if username == operator[i]['username'] and password == operator[i]['password'] :
+      return True
+  
+  print(colored('Username atau password tidak benar', 'red'))
+  return login_admin()
 
 # ============================================================================================================================== #
 
@@ -418,7 +713,7 @@ def aplikasi() :
   while True :
     print()
     print('Anda sebagai')
-    print('[1] User')
+    print('[1] Operator')
     print('[2] Admin')
     print('[0] Keluar')
 
@@ -428,21 +723,28 @@ def aplikasi() :
       print(colored('Pilihan tidak tersedia', 'red'))
       return aplikasi()
 
-    if pilihan == 1 :
-      if login_user() :
-        halaman_user()
+    try :
+      if pilihan == 1 :
+        if login_operator() :
+          halaman_operator()
+          return
+      elif pilihan == 2 :
+        if login_admin() :
+          halaman_admin()
+          return
+      elif pilihan == 0 :
+        print('\n\nBye ^^')
         return
-    elif pilihan == 0 :
-      print('\n\nBye ^^')
-      return
-    else :
-      print(colored('Pilihan tidak tersedia', 'red'))
+      else :
+        print(colored('Pilihan tidak tersedia', 'red'))
+    except KeyboardInterrupt :
+      return aplikasi()
 
 try :
   buat_file_database_json({
-    "operator": [
+    "user": [
       {"id": 1, "username": "admin", "password": "admin", "role": "admin"},
-      {"id": 3, "username": "admin2", "password": "admin2", "role": "admin"}
+      {"id": 3, "username": "op", "password": "op", "role": "operator"}
     ],
     "member": [
       { "id": 1, "nama": "Novil", "tanggal_bergabung": tanggal_sekarang() },
@@ -453,12 +755,16 @@ try :
       {
         "id": 1,
         "id_member": 2,
+        "id_pc": 1,
         "tanggal": tanggal_sekarang(),
         "waktu_mulai": '13:00',
         "waktu_selesai": '14:00',
         "harga": 8000,
         'total_harga': 8000
       },
+    ],
+    "pc": [
+      { "id": 1, "label": "PC 1" }
     ],
     "pengaturan": [
       { "id": 1, "harga_perjam": 8000 }
