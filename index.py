@@ -5,7 +5,6 @@ import pwinput
 import json
 import csv
 import os
-import re
 
 if os.name.lower() == 'windows' :
   os.system('color')
