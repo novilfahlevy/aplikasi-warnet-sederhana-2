@@ -5,15 +5,10 @@ import pwinput
 import json
 import csv
 import os
+import re
 
 if os.name.lower() == 'windows' :
   os.system('color')
-
-# def bersihkan_console() :
-#   if os.name.lower() == 'windows' :
-#     os.system('cls')
-#   else :
-#     os.system('clear')
 
 def waktu_sekarang() :
   return datetime.now().strftime('%H:%M')
@@ -151,9 +146,12 @@ def edit_billing(pesan_error = False) :
       waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
       waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
 
-      harga_perjam = pengaturan("harga_perjam")
-      durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
-      total_harga = int(harga_perjam * int(durasi.seconds / 3600))
+      try :
+        harga_perjam = pengaturan("harga_perjam")
+        durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
+        total_harga = int(harga_perjam * int(durasi.seconds / 3600))
+      except ValueError :
+        return edit_billing(colored('Format waktu tidak tepat', 'red'))
 
       update('billing', {
         'id': id_billing,
@@ -666,9 +664,23 @@ def halaman_user(tampilkan_menu = True) :
 # ============================================================================================================================== #
 
 def laporan_csv() :
-  dari_tanggal = input('Dari tanggal [dd-mm-yyyy] (opsional) : ')
-  sampai_tanggal = input('Sampai tanggal [dd-mm-yyyy] (opsional) : ')
   billing = get('billing')
+
+  dari_tanggal = input('Dari tanggal [dd-mm-yyyy] (opsional) : ')
+  if dari_tanggal != '' :
+    try:
+      datetime.strptime(dari_tanggal, "%d-%m-%Y")
+    except ValueError :
+      print(colored('Format tanggal tidak tempat', 'red'))
+      return laporan_csv()
+  
+  sampai_tanggal = input('Sampai tanggal [dd-mm-yyyy] (opsional) : ')
+  if sampai_tanggal != '' :
+    try:
+      datetime.strptime(sampai_tanggal, "%d-%m-%Y")
+    except ValueError :
+      print(colored('Format tanggal tidak tempat', 'red'))
+      return laporan_csv()
 
   if dari_tanggal == '' and sampai_tanggal != '' :
     billing = list(filter(lambda b: b['tanggal'] <= sampai_tanggal, billing))
@@ -686,7 +698,7 @@ def laporan_csv() :
     writer.writerows(data_billing(billing, color=False))
 
   print()
-  print(colored(f'Laporan telah disimpan di {colored(os.path.dirname(os.path.abspath(__file__)) + "/siwarnet_laporan.csv", "yellow")}', 'green'))
+  print(colored(f'Laporan telah tersimpan di {colored(os.path.dirname(os.path.abspath(__file__)) + "/siwarnet_laporan.csv", "yellow")}', 'green'))
   return halaman_admin()
 
 # ============================================================================================================================= #
@@ -716,7 +728,7 @@ def pilihan_menu_halaman_pengaturan() :
     print()
     print('== Pengaturan ==')
     print(f'[1] Harga Perjam (Rp {"{:0,.0f}".format(pengaturan("harga_perjam"))})')
-    print('[0] Keluar')
+    print('[0] Kembali')
 
     piilhan = int(input('Pilih : '))
     return piilhan
@@ -754,7 +766,7 @@ def pilihan_menu_halaman_admin() :
     return piilhan
   except ValueError :
     print(colored('Pilihan tidak tersedia', 'red'))
-    return pilihan_menu_halaman_user()
+    return pilihan_menu_halaman_admin()
 
 def halaman_admin() :
   try :
