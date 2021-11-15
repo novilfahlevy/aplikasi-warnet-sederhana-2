@@ -1,12 +1,13 @@
 from prettytable import PrettyTable
 from datetime import date, datetime, timedelta
 from termcolor import colored
+import platform
 import pwinput
 import json
 import csv
 import os
 
-if os.name.lower() == 'windows' :
+if platform.system() == 'windows' :
   os.system('color')
 
 def waktu_sekarang() :
@@ -134,7 +135,7 @@ def edit_billing(pesan_error = False) :
       pc = get_by_id('pc', id_pc)
 
       if cek_pc_masih_dipakai(id_pc) and (id_pc != id_pc_lama) :
-        return tambah_billing(colored('PC masih dipakai'))
+        return tambah_billing(colored('PC masih dipakai', 'red'))
     except ValueError :
       return edit_billing(colored('ID PC tidak ditemukan', 'red'))
 
@@ -298,7 +299,7 @@ def halaman_billing(tampilkan_menu = True) :
     hapus_billing()
     return halaman_billing(False)
   elif pilihan == 0 :
-    return halaman_user()
+    return halaman_operator()
   else :
     print(colored('Pilihan tidak ditemukan', 'red'))
     return halaman_billing()
@@ -407,7 +408,7 @@ def halaman_member(tampilkan_menu = True) :
     hapus_member()
     return halaman_member(False)
   elif pilihan == 0 :
-    halaman_user()
+    return halaman_operator()
   else :
     print(colored('Pilihan tidak tersedia', 'red'))
     return halaman_member()
@@ -513,7 +514,7 @@ def edit_pc(pesan_error = False) :
 def tambah_pc() :
   print()
 
-  label = input('label : ')
+  label = input('Label PC : ')
 
   create('pc', { 'label': label })
   tampilkan_pc()
@@ -572,7 +573,7 @@ def halaman_pc(tampilkan_menu = True) :
     hapus_pc()
     return halaman_pc(False)
   elif pilihan == 0 :
-    halaman_admin()
+    return halaman_admin()
   else :
     print(colored('Pilihan tidak tersedia', 'red'))
     return halaman_pc()
@@ -580,7 +581,7 @@ def halaman_pc(tampilkan_menu = True) :
 # ============================================================================================================================== #
 
 def hapus_user(pesan_error = False) :
-  tampilkan_user()
+  tampilkan_user(role='operator')
 
   if pesan_error :
     print(pesan_error)
@@ -588,7 +589,7 @@ def hapus_user(pesan_error = False) :
   id_user = int(input('ID : '))
   user = get_by_id('user', id_user)
 
-  if user :
+  if user and user['role'] != 'admin' :
     delete('user', id_user)
     tampilkan_user()
     print(colored(f'User dengan ID {id_user} berhasil dihapus', 'green'))
@@ -610,7 +611,7 @@ def tambah_user() :
   tampilkan_user()
   print(colored('User telah ditambahkan', 'green'))
 
-def tampilkan_user() :
+def tampilkan_user(role=None) :
   print()
   print('Daftar user :')
 
@@ -619,7 +620,11 @@ def tampilkan_user() :
 
   users = get('user')
   for i in range(len(users)) :
-    tabel.add_row([users[i]['id'], users[i]['username'], users[i]['role']])
+    if role != None :
+      if users[i]['role'] == role :
+        tabel.add_row([users[i]['id'], users[i]['username'], users[i]['role']])
+    else :
+      tabel.add_row([users[i]['id'], users[i]['username'], users[i]['role']])
 
   print(tabel)
 
@@ -655,7 +660,7 @@ def halaman_user(tampilkan_menu = True) :
     hapus_user()
     return halaman_user(False)
   elif pilihan == 0 :
-    halaman_admin()
+    return halaman_admin()
   else :
     print(colored('Pilihan tidak tersedia', 'red'))
     return halaman_user()
@@ -677,7 +682,7 @@ def laporan_csv() :
   if sampai_tanggal != '' :
     try:
       datetime.strptime(sampai_tanggal, "%d-%m-%Y")
-    except ValueError :
+    except ValueError or EOFError :
       print(colored('Format tanggal tidak tepat', 'red'))
       return laporan_csv()
 
