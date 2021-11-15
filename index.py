@@ -674,7 +674,7 @@ def laporan_csv() :
   if dari_tanggal != '' :
     try:
       datetime.strptime(dari_tanggal, "%d-%m-%Y")
-    except ValueError :
+    except ValueError or EOFError :
       print(colored('Format tanggal tidak tepat', 'red'))
       return laporan_csv()
   
