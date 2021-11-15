@@ -670,7 +670,7 @@ def laporan_csv() :
     try:
       datetime.strptime(dari_tanggal, "%d-%m-%Y")
     except ValueError :
-      print(colored('Format tanggal tidak tempat', 'red'))
+      print(colored('Format tanggal tidak tepat', 'red'))
       return laporan_csv()
   
   sampai_tanggal = input('Sampai tanggal [dd-mm-yyyy] (opsional) : ')
@@ -678,7 +678,7 @@ def laporan_csv() :
     try:
       datetime.strptime(sampai_tanggal, "%d-%m-%Y")
     except ValueError :
-      print(colored('Format tanggal tidak tempat', 'red'))
+      print(colored('Format tanggal tidak tepat', 'red'))
       return laporan_csv()
 
   if dari_tanggal == '' and sampai_tanggal != '' :
