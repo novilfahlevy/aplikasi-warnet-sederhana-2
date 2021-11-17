@@ -16,6 +16,25 @@ def waktu_sekarang() :
 def tanggal_sekarang(format = "-") :
   return date.today().strftime(f'%d{format}%m{format}%Y')
 
+def buat_file_session_id_text(id) :
+  id = str(id)
+  file_session = open('session.txt', 'w')
+  file_session.write(id)
+  file_session.close()
+
+def session_id() :
+  file_session = open('session.txt', 'r')
+  id = file_session.read()
+  file_session.close()
+  
+  if id : return int(id)
+  return None
+
+def hapus_session_id() :
+  file_session = open('session.txt', 'w')
+  file_session.write('')
+  file_session.close()
+
 def buat_file_database_json(database) :
   # buat file database jika tidak ada
   file_database = open('database.json', 'a')
@@ -85,6 +104,86 @@ def get_user_by_role(role) :
 
 # ============================================================================================================================== #
 
+def edit_username() :
+  try :
+    username_lama = get_by_id('user', session_id())['username']
+    username = input(f'Username ({username_lama}) : ') or username_lama
+
+    update('user', {
+      'id': session_id(),
+      'data': { 'username': username }
+    })
+
+    print(colored('Username berhasil diedit', 'green'))
+    return halaman_edit_profil()
+  except KeyboardInterrupt :
+    print()
+    return halaman_edit_profil()
+
+def ganti_password() :
+  try :
+    user = get_by_id('user', session_id())
+
+    password_lama = pwinput.pwinput('Password lama : ')
+    if password_lama != user['password'] :
+      print(colored('Password lama tidak tepat', 'red'))
+      return ganti_password()
+
+    password_baru = pwinput.pwinput('Password baru : ')
+    konfirmasi_password_baru = pwinput.pwinput('Konfirmasi password baru : ')
+
+    if len(password_baru) < 5 :
+      print(colored('Password harus memiliki minimal 5 karakter'))
+      return ganti_password()
+
+    if password_baru != konfirmasi_password_baru :
+      print(colored('Konfirmasi password tidak tepat', 'red'))
+      return ganti_password()
+
+    update('user', {
+      'id': session_id(),
+      'data': { 'password': password_baru }
+    })
+
+    print(colored('\nPassword berhasil diganti, silakan login kembali', 'green'))
+    return aplikasi()
+  except KeyboardInterrupt :
+    print()
+    return halaman_edit_profil()
+
+def pilihan_edit_profil() :
+  try :
+    print()
+    print('== Edit Profil ==')
+    print('[1] Edit username')
+    print('[2] Ganti password')
+    print('[0] Kembali')
+    
+    pilihan = int(input('Pilih (pilih 99 untuk menampilkan menu) : '))
+
+    return pilihan
+  except ValueError :
+    print(colored('Pilihan tidak tersedia', 'red'))
+    return pilihan_edit_profil()
+
+def halaman_edit_profil() :
+  pilihan = pilihan_edit_profil()
+  if pilihan == 1 :
+    return edit_username()
+  elif pilihan == 2 :
+    return ganti_password()
+  elif pilihan == 0 :
+    role = get_by_id('user', session_id())['role']
+    if role == 'admin' :
+      return halaman_admin()
+    else :
+      return halaman_operator()
+  else :
+    print(colored('Pilihan tidak ditemukan', 'red'))
+    return halaman_edit_profil()
+
+# ============================================================================================================================== #
+
 def cek_billing_masih_berlaku(id_billing) :
   billing = get_by_id('billing', id_billing)
   tanggal = billing['tanggal']
@@ -140,7 +239,13 @@ def edit_billing(pesan_error = False) :
       return edit_billing(colored('ID PC tidak ditemukan', 'red'))
 
     if pc :
-      tanggal = tanggal_sekarang()
+      try :
+        tanggal_lama = billing['tanggal']
+        tanggal = input(f'Tanggal ({tanggal_lama}) : ') or tanggal_lama
+        datetime.strptime(tanggal, '%d-%m-%Y')
+      except ValueError :
+        return edit_billing(colored('Format tanggal tidak tepat', 'red'))
+      
       waktu_mulai_lama = billing['waktu_mulai']
       waktu_selesai_lama = billing['waktu_selesai']
       waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
@@ -417,11 +522,14 @@ def halaman_member(tampilkan_menu = True) :
 
 def pilihan_menu_halaman_operator() :
   try :
+    username = get_by_id('user', session_id())['username']
     print()
+    print(f'Hai, {colored(username, "yellow")}.')
     print('== Halaman Operator ==')
     print('[1] Billing')
     print('[2] Member')
     print('[0] Keluar')
+    print('[88] Edit Profil')
 
     piilhan = int(input('Pilih : '))
     return piilhan
@@ -436,6 +544,8 @@ def halaman_operator() :
       return halaman_billing()
     elif pilihan == 2 :
       return halaman_member()
+    elif pilihan == 88 :
+      return halaman_edit_profil()
     elif pilihan == 0 :
       return aplikasi()
     else :
@@ -457,6 +567,7 @@ def login_operator() :
 
   for i in range(len(operator)) :
     if username == operator[i]['username'] and password == operator[i]['password'] :
+      buat_file_session_id_text(operator[i]['id'])
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
@@ -511,14 +622,21 @@ def edit_pc(pesan_error = False) :
   else :
     return edit_pc(colored('ID pc tidak ditemukan', 'red'))
 
-def tambah_pc() :
-  print()
+def tambah_pc(pesan_error=None) :
+  if pesan_error :
+    print(pesan_error)
+  else :
+    print()
 
   label = input('Label PC : ')
 
-  create('pc', { 'label': label })
-  tampilkan_pc()
-  print(colored('PC telah ditambahkan', 'green'))
+  if label not in list(map(lambda pc: pc['label'], get('pc'))) :
+    create('pc', { 'label': label })
+    tampilkan_pc()
+    print(colored('PC telah ditambahkan', 'green'))
+  else :
+    return tambah_pc(colored('Label PC sudah ada', 'red'))
+
 
 def tampilkan_pc() :
   print()
@@ -601,6 +719,11 @@ def tambah_user() :
 
   username = input('Username: ')
   password = pwinput.pwinput(mask="*")
+
+  if len(password) < 5 :
+    print(colored('Panjang password minimal 5 karakter', 'red'))
+    return tambah_user()
+
   role = input('Role (admin/operator): ').lower()
 
   if role not in ['admin', 'operator'] :
@@ -716,13 +839,17 @@ def pengaturan_harga_perjam() :
     harga = input(f'Harga perjam (Rp {"{:0,.0f}".format(harga_lama)}) : ') or harga_lama
     harga = int(harga)
 
-    update('pengaturan', {
-      'id': 1,
-      'data': { 'harga_perjam': harga }
-    })
-
-    print(colored('Pengaturan harga perjam berhasil diubah', 'green'))
-    return halaman_pengaturan()
+    if harga > 0 :
+      update('pengaturan', {
+        'id': 1,
+        'data': { 'harga_perjam': harga }
+      })
+      print(colored('Pengaturan harga perjam berhasil diubah', 'green'))
+      return halaman_pengaturan()
+    else :
+      print(colored('Harga tidak tepat', 'red'))
+      return pengaturan_harga_perjam()
+      
   except ValueError :
     print(colored('Input tidak valid', 'red'))
     return pengaturan_harga_perjam()
@@ -758,13 +885,16 @@ def halaman_pengaturan() :
 
 def pilihan_menu_halaman_admin() :
   try :
+    username = get_by_id('user', session_id())['username']
     print()
+    print(f'Hai, {colored(username, "yellow")}.')
     print('== Halaman Admin ==')
     print('[1] PC')
     print('[2] User')
     print('[3] Pengaturan')
     print('[4] Laporan CSV')
     print('[0] Keluar')
+    print('[88] Edit Profil')
 
     piilhan = int(input('Pilih : '))
     return piilhan
@@ -783,6 +913,8 @@ def halaman_admin() :
       return halaman_pengaturan()
     elif pilihan == 4 :
       return laporan_csv()
+    elif pilihan == 88 :
+      return halaman_edit_profil()
     elif pilihan == 0 :
       return aplikasi()
     else :
@@ -804,6 +936,7 @@ def login_admin() :
 
   for i in range(len(operator)) :
     if username == operator[i]['username'] and password == operator[i]['password'] :
+      buat_file_session_id_text(operator[i]['id'])
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
@@ -812,6 +945,8 @@ def login_admin() :
 # ============================================================================================================================== #
 
 def aplikasi() :
+  hapus_session_id()
+
   while True :
     print()
     print('Anda sebagai')
