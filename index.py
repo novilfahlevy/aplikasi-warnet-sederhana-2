@@ -109,6 +109,10 @@ def edit_username() :
     username_lama = get_by_id('user', session_id())['username']
     username = input(f'Username ({username_lama}) : ') or username_lama
 
+    if username != username_lama and username in list(map(lambda user: user['username'], get('user'))) :
+      print(colored('Username sudah digunakan', 'red'))
+      return edit_username()
+
     update('user', {
       'id': session_id(),
       'data': { 'username': username }
@@ -521,8 +525,13 @@ def halaman_member(tampilkan_menu = True) :
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_operator() :
+  user = get_by_id('user', session_id())
+  if user :
+    username = user['username']
+  else :
+    return aplikasi()
+  
   try :
-    username = get_by_id('user', session_id())['username']
     print()
     print(f'Hai, {colored(username, "yellow")}.')
     print('== Halaman Operator ==')
@@ -718,14 +727,16 @@ def tambah_user() :
   print()
 
   username = input('Username: ')
-  password = pwinput.pwinput(mask="*")
+  if username in list(map(lambda user: user['username'], get('user'))) :
+    print(colored('Username sudah digunakan', 'red'))
+    return tambah_user()
 
+  password = pwinput.pwinput(mask="*")
   if len(password) < 5 :
     print(colored('Panjang password minimal 5 karakter', 'red'))
     return tambah_user()
 
   role = input('Role (admin/operator): ').lower()
-
   if role not in ['admin', 'operator'] :
     print(colored('Role tidak sesuai', 'red'))
     return tambah_user()
@@ -884,8 +895,13 @@ def halaman_pengaturan() :
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_admin() :
+  user = get_by_id('user', session_id())
+  if user :
+    username = user['username']
+  else :
+    return aplikasi()
+  
   try :
-    username = get_by_id('user', session_id())['username']
     print()
     print(f'Hai, {colored(username, "yellow")}.')
     print('== Halaman Admin ==')
@@ -949,7 +965,7 @@ def aplikasi() :
 
   while True :
     print()
-    print('Anda sebagai')
+    print('Anda sebagai : ')
     print('[1] Operator')
     print('[2] Admin')
     print('[0] Keluar')
@@ -959,6 +975,9 @@ def aplikasi() :
     except ValueError :
       print(colored('Pilihan tidak tersedia', 'red'))
       return aplikasi()
+    except KeyboardInterrupt :
+      print('\n\nBye ^^')
+      return
 
     try :
       if pilihan == 1 :
