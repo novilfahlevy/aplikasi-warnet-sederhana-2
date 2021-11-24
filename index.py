@@ -10,30 +10,14 @@ import os
 if platform.system() == 'windows' :
   os.system('color')
 
+# ID akun yang sedang login
+id_akun_login = None
+
 def waktu_sekarang() :
   return datetime.now().strftime('%H:%M')
 
 def tanggal_sekarang(format = "-") :
   return date.today().strftime(f'%d{format}%m{format}%Y')
-
-def buat_file_session_id_text(id) :
-  id = str(id)
-  file_session = open('session.txt', 'w')
-  file_session.write(id)
-  file_session.close()
-
-def session_id() :
-  file_session = open('session.txt', 'r')
-  id = file_session.read()
-  file_session.close()
-  
-  if id : return int(id)
-  return None
-
-def hapus_session_id() :
-  file_session = open('session.txt', 'w')
-  file_session.write('')
-  file_session.close()
 
 def buat_file_database_json(database) :
   # buat file database jika tidak ada
@@ -106,7 +90,7 @@ def get_user_by_role(role) :
 
 def edit_username() :
   try :
-    username_lama = get_by_id('user', session_id())['username']
+    username_lama = get_by_id('user', id_akun_login)['username']
     username = input(f'Username ({username_lama}) : ') or username_lama
 
     if username != username_lama and username in list(map(lambda user: user['username'], get('user'))) :
@@ -114,7 +98,7 @@ def edit_username() :
       return edit_username()
 
     update('user', {
-      'id': session_id(),
+      'id': id_akun_login,
       'data': { 'username': username }
     })
 
@@ -126,7 +110,7 @@ def edit_username() :
 
 def ganti_password() :
   try :
-    user = get_by_id('user', session_id())
+    user = get_by_id('user', id_akun_login)
 
     password_lama = pwinput.pwinput('Password lama : ')
     if password_lama != user['password'] :
@@ -145,7 +129,7 @@ def ganti_password() :
       return ganti_password()
 
     update('user', {
-      'id': session_id(),
+      'id': id_akun_login,
       'data': { 'password': password_baru }
     })
 
@@ -177,7 +161,7 @@ def halaman_edit_profil() :
   elif pilihan == 2 :
     return ganti_password()
   elif pilihan == 0 :
-    role = get_by_id('user', session_id())['role']
+    role = get_by_id('user', id_akun_login)['role']
     if role == 'admin' :
       return halaman_admin()
     else :
@@ -525,7 +509,7 @@ def halaman_member(tampilkan_menu = True) :
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_operator() :
-  user = get_by_id('user', session_id())
+  user = get_by_id('user', id_akun_login)
   if user :
     username = user['username']
   else :
@@ -565,6 +549,7 @@ def halaman_operator() :
     return halaman_operator()
 
 def login_operator() :
+  global id_akun_login
   print()
   
   try :
@@ -576,7 +561,7 @@ def login_operator() :
 
   for i in range(len(operator)) :
     if username == operator[i]['username'] and password == operator[i]['password'] :
-      buat_file_session_id_text(operator[i]['id'])
+      id_akun_login = operator[i]['id']
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
@@ -895,7 +880,7 @@ def halaman_pengaturan() :
 # ============================================================================================================================== #
 
 def pilihan_menu_halaman_admin() :
-  user = get_by_id('user', session_id())
+  user = get_by_id('user', id_akun_login)
   if user :
     username = user['username']
   else :
@@ -941,6 +926,7 @@ def halaman_admin() :
     return halaman_admin()
 
 def login_admin() :
+  global id_akun_login
   print()
   
   try :
@@ -952,7 +938,7 @@ def login_admin() :
 
   for i in range(len(operator)) :
     if username == operator[i]['username'] and password == operator[i]['password'] :
-      buat_file_session_id_text(operator[i]['id'])
+      id_akun_login = operator[i]['id']
       return True
   
   print(colored('Username atau password tidak benar', 'red'))
@@ -961,7 +947,8 @@ def login_admin() :
 # ============================================================================================================================== #
 
 def aplikasi() :
-  hapus_session_id()
+  global id_akun_login
+  id_akun_login = None
 
   while True :
     print()
