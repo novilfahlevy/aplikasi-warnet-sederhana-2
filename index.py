@@ -998,7 +998,7 @@ def aplikasi() :
           return
       elif pilihan == 0 :
         print('\n\nBye ^^')
-        return
+        exit()
       else :
         print(colored('Pilihan tidak tersedia', 'red'))
     except KeyboardInterrupt :
