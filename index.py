@@ -56,7 +56,11 @@ def create(field, data) :
   data_db = get()
   data_db[field] = get(field)
 
-  data['id'] = get_last_id(field) + 1
+  last_increment = get_by_id('last_increment', 1)[field]
+  id = last_increment + 1
+
+  data['id'] = id
+  data_db['last_increment'][0][field] = id
   data_db[field].append(data)
 
   timpa_db(data_db)
@@ -205,66 +209,81 @@ def edit_billing(pesan_error = False) :
   try :
     id_billing = int(input('ID billing : '))
     billing = get_by_id('billing', id_billing)
+    if not billing :
+      return edit_billing(colored('ID billing tidak ditemukan', 'red'))
   except ValueError :
-    return edit_billing(colored('ID billing tidak ditemukan', 'red'))
+    return edit_billing(colored('ID billing tidak tepat', 'red'))
 
   if billing :
     member = get_by_id('member', billing['id_member'])
-    id_member = member['id']
+    id_member = member['id'] if member else None
+    
+    if id_member == None :
+      try :
+        id_member = int(input('ID member : '))
+        if not get_by_id('member', id_member) :
+          return edit_billing(colored('ID member tidak ditemukan', 'red'))
+      except ValueError :
+        return edit_billing(colored('ID member tidak tepat', 'red'))
 
     pc_lama = get_by_id('pc', billing['id_pc'])
-    id_pc_lama = pc_lama['id']
-    label_pc_lama = pc_lama['label']
+    if pc_lama == False :
+      try :
+        id_pc = int(input('ID PC : '))
+        pc = get_by_id('pc', id_pc)
 
-    try :
+        if not pc :
+          return edit_billing(colored('ID PC tidak ditemukan', 'red'))
+      except ValueError :
+        return edit_billing(colored('ID PC tidak tepat', 'red'))
+    else :
+      id_pc_lama = pc_lama['id']
+      label_pc_lama = pc_lama['label']
+
       id_pc = input(f'ID PC ({label_pc_lama}) : ') or id_pc_lama
       id_pc = int(id_pc)
       pc = get_by_id('pc', id_pc)
 
-      if cek_pc_masih_dipakai(id_pc) and (id_pc != id_pc_lama) :
-        return tambah_billing(colored('PC masih dipakai', 'red'))
+      if not pc :
+        return edit_billing(colored('ID PC tidak ditemukan', 'red'))
+
+    if cek_pc_masih_dipakai(id_pc) and ((id_pc != id_pc_lama) if pc_lama else True) :
+      return edit_billing(colored('PC masih dipakai', 'red'))
+
+    try :
+      tanggal_lama = billing['tanggal']
+      tanggal = input(f'Tanggal ({tanggal_lama}) : ') or tanggal_lama
+      datetime.strptime(tanggal, '%d-%m-%Y')
     except ValueError :
-      return edit_billing(colored('ID PC tidak ditemukan', 'red'))
+      return edit_billing(colored('Format tanggal tidak tepat', 'red'))
+    
+    waktu_mulai_lama = billing['waktu_mulai']
+    waktu_selesai_lama = billing['waktu_selesai']
+    waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
+    waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
 
-    if pc :
-      try :
-        tanggal_lama = billing['tanggal']
-        tanggal = input(f'Tanggal ({tanggal_lama}) : ') or tanggal_lama
-        datetime.strptime(tanggal, '%d-%m-%Y')
-      except ValueError :
-        return edit_billing(colored('Format tanggal tidak tepat', 'red'))
-      
-      waktu_mulai_lama = billing['waktu_mulai']
-      waktu_selesai_lama = billing['waktu_selesai']
-      waktu_mulai = input(f'Waktu mulai ({waktu_mulai_lama}) : ') or waktu_mulai_lama
-      waktu_selesai = input(f'Waktu selesai ({waktu_selesai_lama}) : ') or waktu_selesai_lama
+    try :
+      harga_perjam = pengaturan("harga_perjam")
+      durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
+      total_harga = int(harga_perjam * int(durasi.seconds / 3600))
+    except ValueError :
+      return edit_billing(colored('Format waktu tidak tepat', 'red'))
 
-      try :
-        harga_perjam = pengaturan("harga_perjam")
-        durasi = datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')
-        total_harga = int(harga_perjam * int(durasi.seconds / 3600))
-      except ValueError :
-        return edit_billing(colored('Format waktu tidak tepat', 'red'))
-
-      update('billing', {
-        'id': id_billing,
-        'data': {
-          'id_pc': id_pc,
-          'id_member': id_member,
-          'tanggal': tanggal,
-          'waktu_mulai': waktu_mulai,
-          'waktu_selesai': waktu_selesai,
-          'harga': harga_perjam,
-          'total_harga': total_harga
-        }
-      })
-      
-      tampilkan_billing()
-      print(colored(f'Billing dengan ID {id_billing} telah edit', 'green'))
-    else :
-      return edit_billing(colored('ID PC tidak ditemukan', 'red'))
-  else :
-    return edit_billing(colored('ID billing tidak ditemukan', 'red'))
+    update('billing', {
+      'id': id_billing,
+      'data': {
+        'id_pc': id_pc,
+        'id_member': id_member,
+        'tanggal': tanggal,
+        'waktu_mulai': waktu_mulai,
+        'waktu_selesai': waktu_selesai,
+        'harga': harga_perjam,
+        'total_harga': total_harga
+      }
+    })
+    
+    tampilkan_billing()
+    print(colored(f'Billing dengan ID {id_billing} telah edit', 'green'))
 
 def tambah_billing(pesan_error = False) :
   print()
@@ -275,47 +294,49 @@ def tambah_billing(pesan_error = False) :
 
   try :
     id_member = int(input('ID member : '))
+    if not get_by_id('member', id_member) :
+      return tambah_billing(colored('ID member tidak ditemukan', 'red'))
   except ValueError :
-    return tambah_billing(colored('ID member tidak ditemukan', 'red'))
+    return tambah_billing(colored('ID member tidak tepat', 'red'))
   
   try :
     id_pc = int(input('ID PC : '))
 
+    if not get_by_id('pc', id_pc) :
+      return tambah_billing(colored('ID PC tidak ditemukan', 'red'))
+
     if cek_pc_masih_dipakai(id_pc) :
-      return tambah_billing(colored('PC masih dipakai'))
+      return tambah_billing(colored('PC masih dipakai', 'red'))
   except ValueError :
-    return tambah_billing(colored('ID PC tidak ditemukan', 'red'))
+    return tambah_billing(colored('ID PC tidak tepat', 'red'))
 
-  if get_by_id('member', id_member) and get_by_id('pc', id_pc) :
-    try :
-      durasi = int(input('Durasi (jam) : '))
-    except ValueError :
-      return tambah_billing(colored('Masukan durasi berdasarkan jam', 'red'))
+  try :
+    durasi = int(input('Durasi (jam) : '))
+  except ValueError :
+    return tambah_billing(colored('Masukan durasi berdasarkan jam', 'red'))
 
-    waktu_mulai = datetime.now()
-    waktu_selesai = waktu_mulai + timedelta(hours=durasi)
-    tanggal = tanggal_sekarang()
+  waktu_mulai = datetime.now()
+  waktu_selesai = waktu_mulai + timedelta(hours=durasi)
+  tanggal = tanggal_sekarang()
 
-    waktu_mulai = waktu_mulai.strftime('%H:%M')
-    waktu_selesai = waktu_selesai.strftime('%H:%M')
+  waktu_mulai = waktu_mulai.strftime('%H:%M')
+  waktu_selesai = waktu_selesai.strftime('%H:%M')
 
-    harga_perjam = pengaturan("harga_perjam")
-    total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
+  harga_perjam = pengaturan("harga_perjam")
+  total_harga = harga_perjam * int((datetime.strptime(waktu_selesai, '%H:%M') - datetime.strptime(waktu_mulai, '%H:%M')).seconds / 3600)
 
-    create('billing', {
-      'id_pc': id_pc,
-      'id_member': id_member,
-      'tanggal': tanggal,
-      'waktu_mulai': waktu_mulai,
-      'waktu_selesai': waktu_selesai,
-      'harga': harga_perjam,
-      'total_harga': total_harga
-    })
+  create('billing', {
+    'id_pc': id_pc,
+    'id_member': id_member,
+    'tanggal': tanggal,
+    'waktu_mulai': waktu_mulai,
+    'waktu_selesai': waktu_selesai,
+    'harga': harga_perjam,
+    'total_harga': total_harga
+  })
 
-    tampilkan_billing()
-    print(colored('Billing telah ditambahkan', 'green'))
-  else :
-    return tambah_billing(colored('ID member tidak ditemukan', 'red'))
+  tampilkan_billing()
+  print(colored('Billing telah ditambahkan', 'green'))
 
 def data_billing(billing, color = True) :
   data = []
@@ -987,7 +1008,7 @@ try :
   buat_file_database_json({
     "user": [
       {"id": 1, "username": "admin", "password": "admin", "role": "admin"},
-      {"id": 3, "username": "op", "password": "op", "role": "operator"}
+      {"id": 2, "username": "op", "password": "op", "role": "operator"}
     ],
     "member": [
       { "id": 1, "nama": "Novil", "tanggal_bergabung": tanggal_sekarang() },
@@ -1011,6 +1032,9 @@ try :
     ],
     "pengaturan": [
       { "id": 1, "harga_perjam": 8000 }
+    ],
+    "last_increment": [
+      { "id": 1, "user": 2, "member": 3, "billing": 1, "pc": 1 }
     ]
   })
   aplikasi()
