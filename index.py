@@ -7,7 +7,7 @@ import json
 import csv
 import os
 
-if platform.system() == 'windows' :
+if platform.system().lower() == 'windows' :
   os.system('color')
 
 # ID akun yang sedang login
@@ -189,8 +189,11 @@ def hapus_billing(pesan_error = False) :
   if pesan_error :
     print(pesan_error)
 
-  id_billing = int(input('ID : '))
-  billing = get_by_id('billing', id_billing)
+  try :
+    id_billing = int(input('ID : '))
+    billing = get_by_id('billing', id_billing)
+  except ValueError :
+    return hapus_billing(pesan_error=colored('ID billing tidak tepat', 'red'))
 
   if billing :
     delete('billing', id_billing)
